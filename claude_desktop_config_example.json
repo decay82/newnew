@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "metabase": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@postergully/metabase-mcp"
+      ],
+      "env": {
+        "METABASE_URL": "YOUR_METABASE_URL",
+        "METABASE_API_KEY": "YOUR_API_KEY"
+      }
+    }
+  }
+}
