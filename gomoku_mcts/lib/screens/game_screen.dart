@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import '../models/game_state.dart';
 import '../widgets/game_board.dart';
-import '../ai/mcts_algorithm.dart';
 import '../ai/mcts_isolate.dart';
 
 /// 오목 게임 메인 화면
@@ -68,41 +66,20 @@ class _GameScreenState extends State<GameScreen> {
       _hintPosition = null;
     });
 
-    try {
-      // Isolate를 사용하여 비동기로 MCTS 실행
-      final response = await MCTSIsolateManager.findBestMoveAsync(
-        _gameState,
-        timeLimitMs: _hintTimeMs,
-      );
+    // MCTS 실행 (웹/네이티브 모두 지원)
+    final response = await MCTSIsolateManager.findBestMoveAsync(
+      _gameState,
+      timeLimitMs: _hintTimeMs,
+    );
 
-      if (mounted) {
-        setState(() {
-          _hintPosition = response.bestMove;
-          _lastIterations = response.iterations;
-          _lastElapsedMs = response.elapsedMs;
-          _topMoves = response.topMoves;
-          _isCalculatingHint = false;
-        });
-      }
-    } catch (e) {
-      // 에러 발생 시 동기 방식으로 폴백
-      debugPrint('Isolate error, falling back to sync: $e');
-
-      final mcts = MCTSAlgorithm();
-      final result = mcts.findBestMoveWithDetails(
-        _gameState,
-        timeLimitMs: _hintTimeMs,
-      );
-
-      if (mounted) {
-        setState(() {
-          _hintPosition = result.bestMove;
-          _lastIterations = result.iterations;
-          _lastElapsedMs = result.elapsedMs;
-          _topMoves = result.topMoves;
-          _isCalculatingHint = false;
-        });
-      }
+    if (mounted) {
+      setState(() {
+        _hintPosition = response.bestMove;
+        _lastIterations = response.iterations;
+        _lastElapsedMs = response.elapsedMs;
+        _topMoves = response.topMoves;
+        _isCalculatingHint = false;
+      });
     }
   }
 
