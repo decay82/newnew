@@ -1,0 +1,10 @@
+# 바둑 AI 코치 백엔드 의존성
+fastapi>=0.109.0
+uvicorn>=0.27.0
+pydantic>=2.5.0
+numpy>=1.26.0
+pandas>=2.1.0
+scikit-learn>=1.4.0
+
+# 선택적 (로컬 LLM 사용 시)
+# llama-cpp-python>=0.2.0
