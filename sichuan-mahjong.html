@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>사천성 (Sichuan Mahjong)</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .game-container {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 900px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .game-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 10px;
+            color: white;
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+
+        .game-info > div {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .controls {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 1.1em;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin: 0 5px;
+            font-weight: bold;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .game-board {
+            display: grid;
+            gap: 8px;
+            background: #f0f0f0;
+            padding: 20px;
+            border-radius: 15px;
+            justify-content: center;
+        }
+
+        .tile {
+            width: 60px;
+            height: 80px;
+            background: linear-gradient(145deg, #ffffff, #e6e6e6);
+            border: 3px solid #ccc;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2em;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 3px 3px 8px rgba(0, 0, 0, 0.2);
+            user-select: none;
+        }
+
+        .tile:hover:not(.matched) {
+            transform: translateY(-5px);
+            box-shadow: 5px 5px 15px rgba(0, 0, 0, 0.3);
+            border-color: #667eea;
+        }
+
+        .tile.selected {
+            background: linear-gradient(145deg, #ffd700, #ffed4e);
+            border-color: #ff6b6b;
+            transform: scale(1.1);
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.8);
+        }
+
+        .tile.matched {
+            opacity: 0;
+            pointer-events: none;
+            transform: scale(0);
+        }
+
+        .tile.hint {
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+                border-color: #ccc;
+            }
+            50% {
+                transform: scale(1.05);
+                border-color: #4ecdc4;
+                box-shadow: 0 0 20px rgba(78, 205, 196, 0.6);
+            }
+        }
+
+        .message {
+            text-align: center;
+            font-size: 1.5em;
+            margin-top: 20px;
+            color: #667eea;
+            font-weight: bold;
+            min-height: 40px;
+        }
+
+        .message.win {
+            color: #27ae60;
+            font-size: 2em;
+            animation: celebrate 0.5s ease-in-out;
+        }
+
+        @keyframes celebrate {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.2);
+            }
+        }
+
+        .path-line {
+            position: absolute;
+            background: rgba(78, 205, 196, 0.5);
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .difficulty {
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .difficulty label {
+            margin: 0 10px;
+            font-size: 1.1em;
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .difficulty select {
+            padding: 8px 15px;
+            font-size: 1em;
+            border-radius: 8px;
+            border: 2px solid #667eea;
+            background: white;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>🀄 사천성 게임 🀄</h1>
+
+        <div class="difficulty">
+            <label for="difficulty">난이도:</label>
+            <select id="difficulty">
+                <option value="easy">쉬움 (6x6)</option>
+                <option value="medium" selected>보통 (8x8)</option>
+                <option value="hard">어려움 (10x10)</option>
+            </select>
+        </div>
+
+        <div class="game-info">
+            <div>
+                <span>⏱️ 시간:</span>
+                <span id="timer">00:00</span>
+            </div>
+            <div>
+                <span>🎯 점수:</span>
+                <span id="score">0</span>
+            </div>
+            <div>
+                <span>🎴 남은 타일:</span>
+                <span id="remaining">0</span>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="btn" onclick="game.restart()">새 게임</button>
+            <button class="btn" onclick="game.showHint()">힌트</button>
+            <button class="btn" onclick="game.shuffle()">섞기</button>
+        </div>
+
+        <div id="game-board" class="game-board"></div>
+
+        <div id="message" class="message"></div>
+    </div>
+
+    <script>
+        class SichuanMahjong {
+            constructor() {
+                this.board = [];
+                this.selectedTiles = [];
+                this.score = 0;
+                this.timeElapsed = 0;
+                this.timerInterval = null;
+                this.gameStarted = false;
+                this.tiles = ['🀄', '🀅', '🀆', '🀇', '🀈', '🀉', '🀊', '🀋', '🀌', '🀍',
+                             '🀎', '🀏', '🀐', '🀑', '🀒', '🀓', '🀔', '🀕', '🀖', '🀗'];
+                this.rows = 8;
+                this.cols = 8;
+
+                this.init();
+            }
+
+            init() {
+                const difficulty = document.getElementById('difficulty').value;
+
+                if (difficulty === 'easy') {
+                    this.rows = 6;
+                    this.cols = 6;
+                } else if (difficulty === 'medium') {
+                    this.rows = 8;
+                    this.cols = 8;
+                } else if (difficulty === 'hard') {
+                    this.rows = 10;
+                    this.cols = 10;
+                }
+
+                this.createBoard();
+                this.renderBoard();
+                this.startTimer();
+                this.updateStats();
+                this.gameStarted = true;
+                document.getElementById('message').textContent = '';
+            }
+
+            createBoard() {
+                const totalTiles = this.rows * this.cols;
+                const pairsNeeded = totalTiles / 2;
+                const tilePool = [];
+
+                for (let i = 0; i < pairsNeeded; i++) {
+                    const tileType = this.tiles[i % this.tiles.length];
+                    tilePool.push(tileType, tileType);
+                }
+
+                // Shuffle
+                for (let i = tilePool.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [tilePool[i], tilePool[j]] = [tilePool[j], tilePool[i]];
+                }
+
+                // Create 2D board
+                this.board = [];
+                let index = 0;
+                for (let row = 0; row < this.rows; row++) {
+                    this.board[row] = [];
+                    for (let col = 0; col < this.cols; col++) {
+                        this.board[row][col] = {
+                            type: tilePool[index++],
+                            matched: false,
+                            row: row,
+                            col: col
+                        };
+                    }
+                }
+            }
+
+            renderBoard() {
+                const boardElement = document.getElementById('game-board');
+                boardElement.style.gridTemplateColumns = `repeat(${this.cols}, 60px)`;
+                boardElement.style.gridTemplateRows = `repeat(${this.rows}, 80px)`;
+                boardElement.innerHTML = '';
+
+                for (let row = 0; row < this.rows; row++) {
+                    for (let col = 0; col < this.cols; col++) {
+                        const tile = this.board[row][col];
+                        const tileElement = document.createElement('div');
+                        tileElement.className = 'tile';
+                        tileElement.textContent = tile.type;
+                        tileElement.dataset.row = row;
+                        tileElement.dataset.col = col;
+
+                        if (tile.matched) {
+                            tileElement.classList.add('matched');
+                        }
+
+                        tileElement.addEventListener('click', () => this.handleTileClick(row, col));
+                        boardElement.appendChild(tileElement);
+                    }
+                }
+            }
+
+            handleTileClick(row, col) {
+                if (!this.gameStarted) return;
+
+                const tile = this.board[row][col];
+                if (tile.matched) return;
+
+                const tileElement = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+
+                if (this.selectedTiles.length === 0) {
+                    this.selectedTiles.push({row, col});
+                    tileElement.classList.add('selected');
+                } else if (this.selectedTiles.length === 1) {
+                    const first = this.selectedTiles[0];
+
+                    if (first.row === row && first.col === col) {
+                        this.selectedTiles = [];
+                        tileElement.classList.remove('selected');
+                        return;
+                    }
+
+                    this.selectedTiles.push({row, col});
+                    tileElement.classList.add('selected');
+
+                    const firstTile = this.board[first.row][first.col];
+                    const secondTile = this.board[row][col];
+
+                    if (firstTile.type === secondTile.type && this.canConnect(first, {row, col})) {
+                        setTimeout(() => {
+                            this.matchTiles(first, {row, col});
+                        }, 300);
+                    } else {
+                        setTimeout(() => {
+                            document.querySelectorAll('.tile.selected').forEach(el => {
+                                el.classList.remove('selected');
+                            });
+                            this.selectedTiles = [];
+                            this.showMessage('연결할 수 없습니다!');
+                        }, 500);
+                    }
+                }
+            }
+
+            canConnect(tile1, tile2) {
+                // Try direct connection (0 turns)
+                if (this.hasDirectPath(tile1, tile2)) {
+                    return true;
+                }
+
+                // Try one turn connection
+                if (this.hasOneCornerPath(tile1, tile2)) {
+                    return true;
+                }
+
+                // Try two turn connection
+                if (this.hasTwoCornerPath(tile1, tile2)) {
+                    return true;
+                }
+
+                return false;
+            }
+
+            hasDirectPath(tile1, tile2) {
+                if (tile1.row === tile2.row) {
+                    return this.isHorizontalClear(tile1.row, tile1.col, tile2.col);
+                }
+                if (tile1.col === tile2.col) {
+                    return this.isVerticalClear(tile1.col, tile1.row, tile2.row);
+                }
+                return false;
+            }
+
+            hasOneCornerPath(tile1, tile2) {
+                // Check corner at (tile1.row, tile2.col)
+                const corner1 = {row: tile1.row, col: tile2.col};
+                if (this.isTileEmpty(corner1.row, corner1.col) ||
+                    (corner1.row === tile2.row && corner1.col === tile2.col)) {
+                    if (this.isHorizontalClear(tile1.row, tile1.col, corner1.col) &&
+                        this.isVerticalClear(tile2.col, tile1.row, tile2.row)) {
+                        return true;
+                    }
+                }
+
+                // Check corner at (tile2.row, tile1.col)
+                const corner2 = {row: tile2.row, col: tile1.col};
+                if (this.isTileEmpty(corner2.row, corner2.col) ||
+                    (corner2.row === tile1.row && corner2.col === tile1.col)) {
+                    if (this.isVerticalClear(tile1.col, tile1.row, corner2.row) &&
+                        this.isHorizontalClear(tile2.row, tile1.col, tile2.col)) {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+
+            hasTwoCornerPath(tile1, tile2) {
+                // Try extending horizontally from tile1
+                for (let col = 0; col < this.cols; col++) {
+                    if (col === tile1.col) continue;
+
+                    if (this.isHorizontalClear(tile1.row, tile1.col, col) &&
+                        this.isTileEmpty(tile1.row, col)) {
+                        const corner = {row: tile1.row, col: col};
+                        if (this.hasOneCornerPath(corner, tile2)) {
+                            return true;
+                        }
+                    }
+                }
+
+                // Try extending vertically from tile1
+                for (let row = 0; row < this.rows; row++) {
+                    if (row === tile1.row) continue;
+
+                    if (this.isVerticalClear(tile1.col, tile1.row, row) &&
+                        this.isTileEmpty(row, tile1.col)) {
+                        const corner = {row: row, col: tile1.col};
+                        if (this.hasOneCornerPath(corner, tile2)) {
+                            return true;
+                        }
+                    }
+                }
+
+                return false;
+            }
+
+            isHorizontalClear(row, col1, col2) {
+                const start = Math.min(col1, col2);
+                const end = Math.max(col1, col2);
+
+                for (let col = start + 1; col < end; col++) {
+                    if (!this.isTileEmpty(row, col)) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+            isVerticalClear(col, row1, row2) {
+                const start = Math.min(row1, row2);
+                const end = Math.max(row1, row2);
+
+                for (let row = start + 1; row < end; row++) {
+                    if (!this.isTileEmpty(row, col)) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+            isTileEmpty(row, col) {
+                if (row < 0 || row >= this.rows || col < 0 || col >= this.cols) {
+                    return true; // Out of bounds is considered "empty" for path finding
+                }
+                return this.board[row][col].matched;
+            }
+
+            matchTiles(tile1, tile2) {
+                this.board[tile1.row][tile1.col].matched = true;
+                this.board[tile2.row][tile2.col].matched = true;
+
+                this.score += 100;
+                this.selectedTiles = [];
+
+                this.renderBoard();
+                this.updateStats();
+                this.checkWin();
+            }
+
+            showHint() {
+                document.querySelectorAll('.tile.hint').forEach(el => el.classList.remove('hint'));
+
+                for (let r1 = 0; r1 < this.rows; r1++) {
+                    for (let c1 = 0; c1 < this.cols; c1++) {
+                        if (this.board[r1][c1].matched) continue;
+
+                        for (let r2 = 0; r2 < this.rows; r2++) {
+                            for (let c2 = 0; c2 < this.cols; c2++) {
+                                if (r1 === r2 && c1 === c2) continue;
+                                if (this.board[r2][c2].matched) continue;
+
+                                const tile1 = this.board[r1][c1];
+                                const tile2 = this.board[r2][c2];
+
+                                if (tile1.type === tile2.type &&
+                                    this.canConnect({row: r1, col: c1}, {row: r2, col: c2})) {
+
+                                    const elem1 = document.querySelector(`[data-row="${r1}"][data-col="${c1}"]`);
+                                    const elem2 = document.querySelector(`[data-row="${r2}"][data-col="${c2}"]`);
+                                    elem1.classList.add('hint');
+                                    elem2.classList.add('hint');
+
+                                    setTimeout(() => {
+                                        elem1.classList.remove('hint');
+                                        elem2.classList.remove('hint');
+                                    }, 2000);
+
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                this.showMessage('가능한 매치가 없습니다! 섞기를 사용하세요.');
+            }
+
+            shuffle() {
+                const remainingTiles = [];
+
+                for (let row = 0; row < this.rows; row++) {
+                    for (let col = 0; col < this.cols; col++) {
+                        if (!this.board[row][col].matched) {
+                            remainingTiles.push(this.board[row][col].type);
+                        }
+                    }
+                }
+
+                // Shuffle
+                for (let i = remainingTiles.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [remainingTiles[i], remainingTiles[j]] = [remainingTiles[j], remainingTiles[i]];
+                }
+
+                // Redistribute
+                let index = 0;
+                for (let row = 0; row < this.rows; row++) {
+                    for (let col = 0; col < this.cols; col++) {
+                        if (!this.board[row][col].matched) {
+                            this.board[row][col].type = remainingTiles[index++];
+                        }
+                    }
+                }
+
+                this.renderBoard();
+                this.showMessage('타일을 섞었습니다!');
+            }
+
+            startTimer() {
+                if (this.timerInterval) {
+                    clearInterval(this.timerInterval);
+                }
+
+                this.timeElapsed = 0;
+                this.timerInterval = setInterval(() => {
+                    this.timeElapsed++;
+                    this.updateTimer();
+                }, 1000);
+            }
+
+            updateTimer() {
+                const minutes = Math.floor(this.timeElapsed / 60);
+                const seconds = this.timeElapsed % 60;
+                document.getElementById('timer').textContent =
+                    `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            }
+
+            updateStats() {
+                document.getElementById('score').textContent = this.score;
+
+                let remaining = 0;
+                for (let row = 0; row < this.rows; row++) {
+                    for (let col = 0; col < this.cols; col++) {
+                        if (!this.board[row][col].matched) {
+                            remaining++;
+                        }
+                    }
+                }
+                document.getElementById('remaining').textContent = remaining;
+            }
+
+            checkWin() {
+                let allMatched = true;
+                for (let row = 0; row < this.rows; row++) {
+                    for (let col = 0; col < this.cols; col++) {
+                        if (!this.board[row][col].matched) {
+                            allMatched = false;
+                            break;
+                        }
+                    }
+                    if (!allMatched) break;
+                }
+
+                if (allMatched) {
+                    clearInterval(this.timerInterval);
+                    this.gameStarted = false;
+                    const message = document.getElementById('message');
+                    message.textContent = `🎉 축하합니다! 클리어! 🎉 (시간: ${document.getElementById('timer').textContent})`;
+                    message.className = 'message win';
+                }
+            }
+
+            showMessage(text) {
+                const message = document.getElementById('message');
+                message.textContent = text;
+                message.className = 'message';
+                setTimeout(() => {
+                    message.textContent = '';
+                }, 2000);
+            }
+
+            restart() {
+                if (this.timerInterval) {
+                    clearInterval(this.timerInterval);
+                }
+                this.board = [];
+                this.selectedTiles = [];
+                this.score = 0;
+                this.timeElapsed = 0;
+                this.gameStarted = false;
+                this.init();
+            }
+        }
+
+        let game;
+        window.onload = () => {
+            game = new SichuanMahjong();
+
+            document.getElementById('difficulty').addEventListener('change', () => {
+                game.restart();
+            });
+        };
+    </script>
+</body>
+</html>
