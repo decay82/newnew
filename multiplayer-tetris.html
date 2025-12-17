@@ -231,11 +231,16 @@
 
             // 내가 방장인지 확인 (가장 먼저 들어온 사람)
             amIHost = (playerKeys[0] === myId);
-            console.log("amIHost:", amIHost, "playerKeys:", playerKeys);
+            console.log("amIHost:", amIHost, "myId:", myId, "playerKeys:", playerKeys);
 
             // 두 명 다 준비 상태인지 확인
             const allReady = playerKeys.length === 2 && playerKeys.every(k => players[k].status === 'ready');
             console.log("allReady:", allReady, "playerCount:", playerKeys.length);
+
+            // 각 플레이어 상태 출력
+            playerKeys.forEach(key => {
+                console.log(`  Player ${key}: status=${players[key].status}, isMe=${key === myId}`);
+            });
 
             const btn = document.getElementById('actionBtn');
             const statusDiv = document.getElementById('status');
@@ -265,19 +270,22 @@
                 }
                 // 3. 둘 다 준비 완료됨
                 else if (allReady) {
+                    console.log("🔥 둘 다 준비 완료! amIHost:", amIHost);
                     if (amIHost) {
                         // 방장: 시작 버튼 활성화
                         statusDiv.innerText = "모두 준비 완료! 시작 버튼을 누르세요.";
-                        btn.innerText = "게임 시작 (START)";
+                        btn.innerText = "🎮 게임 시작 (START)";
                         btn.disabled = false; // ✅ 버튼 잠금 해제
                         btn.classList.add('start-ready'); // 빨간색 강조
-                        console.log("→ 방장: 시작 버튼 활성화!");
+                        btn.style.cursor = 'pointer'; // 강제로 커서 변경
+                        console.log("→ 방장: 시작 버튼 활성화! (클릭하세요!)");
                     } else {
                         // 일반 유저: 방장 대기
                         statusDiv.innerText = "방장이 곧 게임을 시작합니다...";
                         btn.innerText = "방장 시작 대기 중...";
                         btn.disabled = true;
                         btn.classList.remove('start-ready');
+                        console.log("→ 일반 유저: 방장 대기 중...");
                     }
                 }
             }
